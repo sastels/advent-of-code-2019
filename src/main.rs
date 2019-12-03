@@ -1,4 +1,5 @@
 mod day_01;
+mod day_02;
 
 fn main() {
     let mut weights_a = [
@@ -26,4 +27,7 @@ fn main() {
 
     day_01::day1a(&mut weights_a);
     day_01::day1b(&mut weights_b);
+
+    day_02::day2a();
+    day_02::day2b()
 }
