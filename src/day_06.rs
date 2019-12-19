@@ -1,7 +1,6 @@
 #[path = "tree.rs"]
 mod tree;
 use math::round;
-use std::cmp::Ordering;
 
 #[derive(Eq, Ord, PartialEq, PartialOrd, Clone)]
 struct Orbit {
@@ -10,35 +9,12 @@ struct Orbit {
 }
 
 impl Orbit {
-    fn new_from_string(s: String) -> Orbit {
-        let s_vec: Vec<&str> = s.split(')').collect();
-        Orbit {
-            center: s_vec[0].to_string(),
-            planet: s_vec[1].to_string(),
-        }
-    }
-
     fn new_from_str(s: &str) -> Orbit {
         let s_vec: Vec<&str> = s.split(')').collect();
         Orbit {
             center: s_vec[0].to_string(),
             planet: s_vec[1].to_string(),
         }
-    }
-}
-
-fn compare_orbits(a: &Orbit, b: &Orbit) -> Ordering {
-    if a.planet == b.planet {
-        println!("ERROR planet {} appears twice", a.planet);
-        return Ordering::Equal;
-    } else if a.center == b.center {
-        return a.planet.cmp(&b.planet);
-    } else if a.center == b.planet {
-        return Ordering::Greater;
-    } else if a.planet == b.center {
-        return Ordering::Less;
-    } else {
-        return a.center.cmp(&b.center);
     }
 }
 
@@ -94,10 +70,6 @@ pub fn compute_xfer_path_len(system: &tree::Node, a_str: &str, b_str: &str) -> u
         .zip(path_b.chars())
         .filter(|(a, b)| *a == *b) // this isn't quite right - I think it's matching more than common prefix
         .fold(0, |acc, _| acc + 1);
-
-    // let len_a = path_a.chars().filter(|c| *c == ',').fold(0, |acc, _| acc + 1);
-    // let len_b = path_b.chars().filter(|c| *c == ',').fold(0, |acc, _| acc + 1);
-    // let len_common =
     let xfer_str_len = path_a.len() + path_b.len() - 2 * common_len;
     return round::ceil(xfer_str_len as f64 / 4f64, 0) as usize;
 }
@@ -116,18 +88,10 @@ pub fn run2(data_str: &str) {
 #[cfg(test)]
 mod tests {
     use super::Orbit;
-    use std::cmp::Ordering;
 
     #[test]
     fn orbit_new_1() {
         let orbit = Orbit::new_from_str("a)b");
-        assert_eq!(orbit.center, "a".to_string());
-        assert_eq!(orbit.planet, "b".to_string());
-    }
-
-    #[test]
-    fn orbit_new_2() {
-        let orbit = Orbit::new_from_string("a)b".to_string());
         assert_eq!(orbit.center, "a".to_string());
         assert_eq!(orbit.planet, "b".to_string());
     }
@@ -138,29 +102,6 @@ mod tests {
         let orbits = super::orbit_vec_from_str(&input);
         assert_eq!(format!("{:?}", orbits[0]), "B)A");
         assert_eq!(format!("{:?}", orbits[1]), "COM)B");
-    }
-
-    #[test]
-    fn compare_orbits() {
-        let orbit_1 = Orbit::new_from_str("a)b");
-        let orbit_2 = Orbit::new_from_str("b)c");
-        let orbit_1b = Orbit::new_from_str("a)c");
-        let orbit_3 = Orbit::new_from_str("c)d");
-        assert_eq!(super::compare_orbits(&orbit_1, &orbit_1b), Ordering::Less); // centers equal
-        assert_eq!(super::compare_orbits(&orbit_2, &orbit_1), Ordering::Greater); // a center == b planet
-        assert_eq!(super::compare_orbits(&orbit_1, &orbit_2), Ordering::Less); // b center == a planet
-        assert_eq!(super::compare_orbits(&orbit_1, &orbit_1), Ordering::Equal); // same orbit
-        assert_eq!(super::compare_orbits(&orbit_3, &orbit_1), Ordering::Greater);
-        assert_eq!(super::compare_orbits(&orbit_1, &orbit_3), Ordering::Less);
-    }
-
-    #[test]
-    fn test_sort() {
-        let input = "B)A,COM)B";
-        let mut orbits = super::orbit_vec_from_str(&input);
-        orbits.sort_by(|a, b| super::compare_orbits(a, b));
-        assert_eq!(format!("{:?}", orbits[0]), "COM)B");
-        assert_eq!(format!("{:?}", orbits[1]), "B)A");
     }
 
     #[test]
