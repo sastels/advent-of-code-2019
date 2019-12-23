@@ -71,9 +71,6 @@ pub fn run_part1(input8: &str) {
 pub fn run_part2(input8: &str) {
     let layers = Layers::new(input8, 25, 6);
     let image = layers.combine_layers();
-
-    let image_str = format!("{:?}", image);
-
     println!("{:?}", image);
 }
 
