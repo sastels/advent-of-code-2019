@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 #[derive(Clone)]
 pub struct Program {
     code: Vec<i128>,
