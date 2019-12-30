@@ -145,7 +145,6 @@ impl Program {
     }
 
     fn step_prog(&self) -> Program {
-        let DEBUG = true;
         let mut prog = self.clone();
         prog.done = false;
         let opcode = self.get_opcode();
@@ -158,9 +157,7 @@ impl Program {
                 let res_addr = prog.get_operand_addr(3) as usize;
                 prog.code[res_addr] = op1 + op2;
                 prog.inst_ptr += 4;
-                if DEBUG {
-                    print!("{} + {} ({}) => addr {}", op1, op2, op1 + op2, res_addr);
-                }
+                print!("{} + {} ({}) => addr {}", op1, op2, op1 + op2, res_addr);
             }
             2 => {
                 let op1 = prog.get_operand(1);
@@ -168,9 +165,7 @@ impl Program {
                 let res_addr = prog.get_operand_addr(3) as usize;
                 prog.code[res_addr] = op1 * op2;
                 prog.inst_ptr += 4;
-                if DEBUG {
-                    print!("{} + {} ({}) => addr {}", op1, op2, op1 * op2, res_addr);
-                }
+                print!("{} + {} ({}) => addr {}", op1, op2, op1 * op2, res_addr);
             }
             3 => {
                 let res_addr = prog.get_operand_addr(1) as usize;
@@ -230,9 +225,7 @@ impl Program {
             9 => {
                 let op1 = prog.get_operand(1);
                 let new_relative_base = prog.relative_base as i128 + op1;
-                if DEBUG {
-                    print!("set relative base to {}", new_relative_base);
-                }
+                print!("set relative base to {}", new_relative_base);
                 prog.relative_base = new_relative_base as usize;
                 prog.inst_ptr += 2;
             }
