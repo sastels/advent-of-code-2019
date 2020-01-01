@@ -3,6 +3,7 @@ pub struct Program {
     code: Vec<i128>,
     inst_ptr: usize,
     done: bool,
+    input_needed: bool,
     input: Vec<i128>,
     input_ptr: usize,
     output: Option<i128>,
@@ -13,10 +14,11 @@ impl std::fmt::Debug for Program {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "{:?}, {}, done: {} input: {:?} output: {}",
+            "{:?}, {}, done: {}  input_needed: {}  input: {:?}  output: {}",
             self.code,
             self.inst_ptr,
             self.done,
+            self.input_needed,
             self.input,
             self.output.unwrap_or(-6666)
         )
@@ -45,6 +47,7 @@ impl Program {
             code: arr.clone(),
             inst_ptr: 0,
             done: false,
+            input_needed: false,
             input: input.clone(),
             input_ptr: 0,
             output: None,
@@ -55,7 +58,8 @@ impl Program {
     }
 
     pub fn push_input(&mut self, input: i128) {
-        self.input.push(input)
+        self.input.push(input);
+        self.input_needed = false;
     }
 
     pub fn get_output(&mut self) -> i128 {
@@ -66,6 +70,14 @@ impl Program {
 
     pub fn is_done(&self) -> bool {
         self.done
+    }
+
+    pub fn needs_input(&self) -> bool {
+        self.input_needed
+    }
+
+    pub fn output_ready(&self) -> bool {
+        self.output.is_some()
     }
 
     fn get_opcode(&self) -> i128 {
@@ -144,12 +156,21 @@ impl Program {
         }
     }
 
+    pub fn peek(&self, address: usize) -> i128 {
+        self.code[address]
+    }
+
+    pub fn poke(&mut self, address: usize, value: i128) {
+        self.code[address] = value;
+    }
+
     fn step_prog(&self) -> Program {
         let mut prog = self.clone();
         prog.done = false;
+        prog.input_needed = false;
         let opcode = self.get_opcode();
 
-        print!("----  op {} : {} : ", opcode, prog.complete_instruction());
+        // print!("-- --  op {} : {} : ", opcode, prog.complete_instruction());
         match opcode {
             1 => {
                 let op1 = prog.get_operand(1);
@@ -157,7 +178,7 @@ impl Program {
                 let res_addr = prog.get_operand_addr(3) as usize;
                 prog.code[res_addr] = op1 + op2;
                 prog.inst_ptr += 4;
-                print!("{} + {} ({}) => addr {}", op1, op2, op1 + op2, res_addr);
+                // print!("{} + {} ({}) => addr {}", op1, op2, op1 + op2, res_addr);
             }
             2 => {
                 let op1 = prog.get_operand(1);
@@ -165,19 +186,24 @@ impl Program {
                 let res_addr = prog.get_operand_addr(3) as usize;
                 prog.code[res_addr] = op1 * op2;
                 prog.inst_ptr += 4;
-                print!("{} + {} ({}) => addr {}", op1, op2, op1 * op2, res_addr);
+                // print!("{} + {} ({}) => addr {}", op1, op2, op1 * op2, res_addr);
             }
             3 => {
-                let res_addr = prog.get_operand_addr(1) as usize;
-                let input = prog.input[prog.input_ptr];
-                print!("Store input {} => addr {}", input, res_addr);
-                prog.code[res_addr] = input;
-                prog.inst_ptr += 2;
-                prog.input_ptr += 1;
+                if prog.input_ptr >= prog.input.len() {
+                    // println!("-- -- Input needed but empty");
+                    prog.input_needed = true;
+                } else {
+                    let res_addr = prog.get_operand_addr(1) as usize;
+                    let input = prog.input[prog.input_ptr];
+                    // print!("-- -- Store input {} => addr {}", input, res_addr);
+                    prog.code[res_addr] = input;
+                    prog.inst_ptr += 2;
+                    prog.input_ptr += 1;
+                }
             }
             4 => {
                 let op1 = prog.get_operand(1);
-                print!("output {}", op1);
+                // print!("output {}", op1);
                 prog.output = Some(op1);
                 prog.inst_ptr += 2;
             }
@@ -186,10 +212,10 @@ impl Program {
                 let op2 = prog.get_operand(2);
 
                 if op1 != 0 {
-                    print!("{} != 0 so set inst_ptr to {}", op1, op2);
+                    // print!("{} != 0 so set inst_ptr to {}", op1, op2);
                     prog.inst_ptr = op2 as usize;
                 } else {
-                    print!("{} == 0 so add 3 to inst_ptr", op1);
+                    // print!("{} == 0 so add 3 to inst_ptr", op1);
                     prog.inst_ptr += 3;
                 }
             }
@@ -207,10 +233,10 @@ impl Program {
                 let op2 = prog.get_operand(2);
                 let res_addr = prog.get_operand_addr(3) as usize;
                 if op1 < op2 {
-                    print!("{} < {} so store 1 in addr {}", op1, op2, res_addr);
+                    // print!("{} < {} so store 1 in addr {}", op1, op2, res_addr);
                     prog.code[res_addr] = 1;
                 } else {
-                    print!("{} >= {} so store 0 in addr {}", op1, op2, res_addr);
+                    // print!("{} >= {} so store 0 in addr {}", op1, op2, res_addr);
                     prog.code[res_addr] = 0;
                 }
                 prog.inst_ptr += 4;
@@ -225,25 +251,24 @@ impl Program {
             9 => {
                 let op1 = prog.get_operand(1);
                 let new_relative_base = prog.relative_base as i128 + op1;
-                print!("set relative base to {}", new_relative_base);
+                // print!("set relative base to {}", new_relative_base);
                 prog.relative_base = new_relative_base as usize;
                 prog.inst_ptr += 2;
             }
             99 => {
                 prog.done = true;
             }
-            _ => {
-                prog.done = true;
-            }
+            _ => panic!("Unknown opcode {}", opcode),
         }
-        println!(" ");
+        // println!(" ");
         return prog;
     }
 
     pub fn run_prog(&self) -> Program {
+        // println!("-- -- Starting run_prog");
         let mut prog = self.clone();
         loop {
-            if prog.is_done() || prog.output.is_some() {
+            if prog.is_done() || prog.output.is_some() || prog.needs_input() {
                 break;
             }
             prog = prog.step_prog();
@@ -255,6 +280,20 @@ impl Program {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn peek() {
+        let prog = Program::new("1, 1, 1, 4, 99, 5, 6, 0, 99", "");
+        assert_eq!(prog.peek(0), 1);
+        assert_eq!(prog.peek(4), 99);
+    }
+
+    #[test]
+    fn poke() {
+        let mut prog = Program::new("1, 1, 1, 4, 99, 5, 6, 0, 99", "");
+        prog.poke(2, 66);
+        assert_eq!(prog.peek(2), 66);
+    }
 
     #[test]
     fn step_prog() {
@@ -304,6 +343,21 @@ mod tests {
         prog = prog.run_prog();
         assert_eq!(prog.is_done(), true);
         assert_eq!(prog.code[3], 666);
+    }
+
+    #[test]
+    fn needs_input() {
+        let mut prog = Program::new("3, 3, 99, 11", "");
+        assert_eq!(prog.needs_input(), false);
+        prog = prog.run_prog();
+        assert_eq!(prog.is_done(), false);
+        assert_eq!(prog.needs_input(), true);
+        assert_eq!(prog.code[3], 11);
+        prog.push_input(666);
+        prog = prog.run_prog();
+        assert_eq!(prog.is_done(), true);
+        assert_eq!(prog.code[3], 666);
+        assert_eq!(prog.needs_input(), false);
     }
 
     #[test]
