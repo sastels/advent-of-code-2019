@@ -134,6 +134,22 @@ impl ReactionList {
 
         // collapse the needed list to put together the same ingredients
 
+        let mut needed_collapsed = HashMap::new();
+        for ingredient in needed.iter() {
+            if needed_collapsed.contains_key(&ingredient.name) {
+                let x = needed_collapsed.get_mut(&ingredient.name).unwrap();
+                *x = *x + ingredient.number;
+            } else {
+                needed_collapsed.insert(ingredient.name.clone(), ingredient.number);
+            }
+        }
+        needed = needed_collapsed
+            .iter()
+            .map(|(key, val)| Ingredient::new(*val, key))
+            .collect();
+
+        println!("now needed: {:?}", needed);
+
         0
     }
 }
