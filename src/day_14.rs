@@ -97,60 +97,73 @@ impl ReactionList {
 
         // find the next one we can create
 
-        let mut next_choice_option = None;
-        for ingredient in needed.iter().map(|i| i.clone()) {
-            if !needed
+        while (needed.len() > 1 || needed[0].name != "ORE".to_string()) {
+            let mut next_choice_option = None;
+            for ingredient in needed
                 .iter()
-                .map(|i| i.name.clone())
-                .map(|name| self.reaction_for_output(&name).unwrap())
-                .any(|r| r.inputs.iter().any(|ii| ii.name == ingredient.name))
+                .filter(|i| i.name != "ORE".to_string())
+                .map(|i| i.clone())
             {
-                next_choice_option = Some(ingredient.clone());
-                break;
+                println!("Testing for {:?}", ingredient);
+
+                if !needed
+                    .iter()
+                    .map(|i| i.name.clone())
+                    .filter(|name| *name != "ORE".to_string())
+                    .map(|name| self.reaction_for_output(&name).unwrap())
+                    .any(|r| {
+                        r.inputs
+                            .iter()
+                            .any(|ii| ii.name == ingredient.name && ii.name != "ORE".to_string())
+                    })
+                {
+                    next_choice_option = Some(ingredient.clone());
+                    break;
+                }
             }
-        }
-        let next_choice = next_choice_option.unwrap(); // will panic if didn't find one
-        println!("finding {:?}", next_choice);
+            let next_choice = next_choice_option.unwrap(); // will panic if didn't find one
+            println!("finding {:?}", next_choice);
 
-        // take this one out of the needed list, and add in all the ingredients from its reaction
-        // (with correct numbers)
+            // take this one out of the needed list, and add in all the ingredients from its reaction
+            // (with correct numbers)
 
-        needed = needed
-            .iter()
-            .filter(|i| i.name != next_choice.name)
-            .map(|ir| ir.clone())
-            .collect();
+            needed = needed
+                .iter()
+                .filter(|i| i.name != next_choice.name)
+                .map(|ir| ir.clone())
+                .collect();
 
-        let next_choice_reaction = self.reactions.get(&next_choice.name).unwrap();
+            let next_choice_reaction = self.reactions.get(&next_choice.name).unwrap();
 
-        for ingredient in next_choice_reaction.inputs.iter() {
-            let mut needed_ingredient = ingredient.clone();
-            let multiplier = (next_choice.number + next_choice_reaction.output.number - 1)
-                / next_choice_reaction.output.number;
-            needed_ingredient.number *= multiplier;
-            needed.push(needed_ingredient);
-        }
-        println!("now needed: {:?}", needed);
-
-        // collapse the needed list to put together the same ingredients
-
-        let mut needed_collapsed = HashMap::new();
-        for ingredient in needed.iter() {
-            if needed_collapsed.contains_key(&ingredient.name) {
-                let x = needed_collapsed.get_mut(&ingredient.name).unwrap();
-                *x = *x + ingredient.number;
-            } else {
-                needed_collapsed.insert(ingredient.name.clone(), ingredient.number);
+            for ingredient in next_choice_reaction.inputs.iter() {
+                let mut needed_ingredient = ingredient.clone();
+                let multiplier = (next_choice.number + next_choice_reaction.output.number - 1)
+                    / next_choice_reaction.output.number;
+                needed_ingredient.number *= multiplier;
+                needed.push(needed_ingredient);
             }
+            println!("now needed: {:?}", needed);
+
+            // collapse the needed list to put together the same ingredients
+
+            let mut needed_collapsed = HashMap::new();
+            for ingredient in needed.iter() {
+                if needed_collapsed.contains_key(&ingredient.name) {
+                    let x = needed_collapsed.get_mut(&ingredient.name).unwrap();
+                    *x = *x + ingredient.number;
+                } else {
+                    needed_collapsed.insert(ingredient.name.clone(), ingredient.number);
+                }
+            }
+            needed = needed_collapsed
+                .iter()
+                .map(|(key, val)| Ingredient::new(*val, key))
+                .collect();
+
+            println!("now needed: {:?}", needed);
         }
-        needed = needed_collapsed
-            .iter()
-            .map(|(key, val)| Ingredient::new(*val, key))
-            .collect();
 
-        println!("now needed: {:?}", needed);
-
-        0
+        needed[0].number
     }
 }
 
