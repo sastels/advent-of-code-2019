@@ -77,8 +77,16 @@ impl ReactionList {
         rl
     }
 
+    pub fn ore_for_fuel(&self) -> u32 {
+        0
+    }
+
     pub fn insert_reaction(&mut self, r: &Reaction) {
         self.reactions.insert(r.output.name.clone(), r.clone());
+    }
+
+    pub fn reaction_for_output(&self, output: &String) -> Option<&Reaction> {
+        self.reactions.get(output)
     }
 }
 
@@ -165,5 +173,29 @@ mod reaction_list {
         rl.insert_reaction(&r2);
         assert_eq!(*rl.reactions.get("C").unwrap(), r1);
         assert_eq!(*rl.reactions.get("CC").unwrap(), r2);
+    }
+
+    #[test]
+    fn reaction_for_output() {
+        let rl = ReactionList::new("10 ORE => 10 A\n7 A, 1 D => 1 E");
+        assert_eq!(
+            *rl.reaction_for_output(&"A".to_string()).unwrap(),
+            Reaction::new("10 ORE => 10 A")
+        );
+        assert_eq!(rl.reaction_for_output(&"NONO".to_string()).is_none(), true);
+    }
+
+    #[test]
+    fn ore_for_fuel() {
+        let input = "
+        10 ORE => 10 A
+        1 ORE => 1 B
+        7 A, 1 B => 1 C
+        7 A, 1 C => 1 D
+        7 A, 1 D => 1 E
+        7 A, 1 E => 1 FUEL
+        ";
+        let rl = ReactionList::new(input);
+        assert_eq!(rl.ore_for_fuel(), 31);
     }
 }
