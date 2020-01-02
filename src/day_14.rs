@@ -77,16 +77,64 @@ impl ReactionList {
         rl
     }
 
-    pub fn ore_for_fuel(&self) -> u32 {
-        0
-    }
-
     pub fn insert_reaction(&mut self, r: &Reaction) {
         self.reactions.insert(r.output.name.clone(), r.clone());
     }
 
     pub fn reaction_for_output(&self, output: &String) -> Option<&Reaction> {
         self.reactions.get(output)
+    }
+
+    pub fn ore_for_fuel(&self) -> u32 {
+        // find the starting list of needed ingredients
+
+        let mut needed = self
+            .reaction_for_output(&"FUEL".to_string())
+            .unwrap()
+            .clone()
+            .inputs;
+        println!("needed: {:?}", needed);
+
+        // find the next one we can create
+
+        let mut next_choice_option = None;
+        for ingredient in needed.iter().map(|i| i.clone()) {
+            if !needed
+                .iter()
+                .map(|i| i.name.clone())
+                .map(|name| self.reaction_for_output(&name).unwrap())
+                .any(|r| r.inputs.iter().any(|ii| ii.name == ingredient.name))
+            {
+                next_choice_option = Some(ingredient.clone());
+                break;
+            }
+        }
+        let next_choice = next_choice_option.unwrap(); // will panic if didn't find one
+        println!("finding {:?}", next_choice);
+
+        // take this one out of the needed list, and add in all the ingredients from its reaction
+        // (with correct numbers)
+
+        needed = needed
+            .iter()
+            .filter(|i| i.name != next_choice.name)
+            .map(|ir| ir.clone())
+            .collect();
+
+        let next_choice_reaction = self.reactions.get(&next_choice.name).unwrap();
+
+        for ingredient in next_choice_reaction.inputs.iter() {
+            let mut needed_ingredient = ingredient.clone();
+            let multiplier = (next_choice.number + next_choice_reaction.output.number - 1)
+                / next_choice_reaction.output.number;
+            needed_ingredient.number *= multiplier;
+            needed.push(needed_ingredient);
+        }
+        println!("now needed: {:?}", needed);
+
+        // collapse the needed list to put together the same ingredients
+
+        0
     }
 }
 
@@ -128,10 +176,9 @@ mod reaction_list {
 
     #[test]
     fn new_2() {
-        let input = "10 ORE => 10 A
-        7 A, 1 D => 1 E";
-
+        let input = "10 ORE => 10 A\n7 A, 1 D => 1 E";
         let rl = ReactionList::new(input);
+        assert_eq!(rl.reactions.len(), 2);
         assert_eq!(
             *rl.reactions.get("A").unwrap(),
             Reaction::new("10 ORE => 10 A")
@@ -149,8 +196,7 @@ mod reaction_list {
         10 ORE => 10 A
         
         7 A, 1 D => 1 E
-        
-               
+         
         ";
         let rl = ReactionList::new(input);
         assert_eq!(rl.reactions.len(), 2);
